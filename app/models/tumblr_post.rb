@@ -8,9 +8,9 @@ class TumblrPost
 
   property :id, Serial
   property :tumblr_id, Integer
-  property :big_url, String
-  property :med_url, String
-  property :small_url, String
+  property :big_url, String, :length => 100
+  property :med_url, String, :length => 100
+  property :small_url, String, :length => 100
   property :timestamp, DateTime
   property :text, Text
   property :post_type, String
@@ -21,18 +21,12 @@ class TumblrPost
     first(search_attributes) || new(search_attributes.merge(create_attributes))
   end
 
-  def self.check_and_get_tumblr(acct)
-    tumble_posts = self.tumble(acct, :start => 0, :num => 1 )
-    post = find_or_new(:tumblr_id => tumble_posts[0]['id'])
-
-    if post.new_record?
-      tumble(acct, :start => 0, :num => 15, :save => true )
-    end
-    
-    get(:all, :limit => 15, :order => "post_datetime DESC")
+  def self.check_tumblr(acct, options = {})
+    tumble(acct, options) if find_or_new(:tumblr_id => tumble(acct, :start => 0, :num => 1 ).first.id ).new_record?
   end
 
   def self.tumble(acct, options = {})
+    options = {:start => 0, :num => 15, :save => true}.merge(options)
     url = "http://#{acct}.tumblr.com/api/read?start=#{options[:start]}&num=#{options[:num]}"
     doc = Hpricot.XML(open(url))
 
@@ -40,19 +34,16 @@ class TumblrPost
     current = options[:start]
 
     (doc/"post").each do |tumble_post|
-      post = find_or_new(:tumblr_id => tumble_post["id"], :timestamp => Time.parse(tumble_post["date"]), :post_type => tumble_post['type'])
+      post = find_or_new(:tumblr_id => tumble_post["id"], :timestamp => DateTime.parse(tumble_post["date"]), :post_type => tumble_post['type'])
       if post.new_record?
-        if post.post_type == "photo"
+        case post.post_type
+        when "photo"
           extract_photo(tumble_post, post)
         end
-        
-        # begin
-        #   TumblrPost.send("extract_#{post.post_type}", post)
-        # rescue
-        #   post.text = "Post type: #{post.post_type} is not supported yet... Why don't you add you lazy @#$"
-        # end
+      
         
         post.save if options[:save]
+  
       end
       
       @posts << post
