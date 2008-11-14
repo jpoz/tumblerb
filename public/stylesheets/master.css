@@ -12,6 +12,9 @@ html {
   height: 100%;
   margin-bottom: 1px;
 }
+td {
+	border: 1px solid #999;
+}
 #container {
   width: 80%;
   text-align: left;

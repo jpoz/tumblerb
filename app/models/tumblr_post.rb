@@ -8,6 +8,7 @@ class TumblrPost
 
   property :id, Serial
   property :tumblr_id, Integer
+  property :title, String, :length => 100
   property :big_url, String, :length => 100
   property :med_url, String, :length => 100
   property :small_url, String, :length => 100
@@ -29,39 +30,50 @@ class TumblrPost
     options = {:start => 0, :num => 15, :save => true}.merge(options)
     url = "http://#{acct}.tumblr.com/api/read?start=#{options[:start]}&num=#{options[:num]}"
     doc = Hpricot.XML(open(url))
-
     @posts= []
-    current = options[:start]
-
     (doc/"post").each do |tumble_post|
-      post = find_or_new(:tumblr_id => tumble_post["id"], :timestamp => DateTime.parse(tumble_post["date"]), :post_type => tumble_post['type'])
+      post = find_or_new(
+              :tumblr_id => tumble_post["id"], 
+              :timestamp => DateTime.parse(tumble_post["date"]), 
+              :post_type => tumble_post['type']
+      )
       if post.new_record?
-        case post.post_type
-        when "photo"
-          extract_photo(tumble_post, post)
+        begin
+          send("extract_#{post.post_type}", tumble_post, post)
+        rescue
+          post.text = "#{post.post_type} not supported"
         end
-      
-        
         post.save if options[:save]
-  
       end
-      
       @posts << post
-      current += 1
     end
-
     @posts
   end
 
   private
 
   def self.extract_photo(p, post = TumblrPost.new)
-    post.big_url = (p/"photo-url").first.inner_html unless (p/"photo-url").first == nil
-    post.med_url = post.big_url.to_s.gsub(/_500/, '_400')
+    post.big_url   = (p/"photo-url").first.inner_html if (p/"photo-url").first
+    post.med_url   = post.big_url.to_s.gsub(/_500/, '_400')
     post.small_url = post.big_url.to_s.gsub(/_500/, '_75sq')
-    post.text = CGI::unescapeHTML((p/"photo-caption").first.inner_html.to_s) unless (p/"photo-caption").first == nil
+    post.text      = CGI::unescapeHTML((p/"photo-caption").first.inner_html.to_s) if (p/"photo-caption").first
   end
 
+  def self.extract_regular(p, post = TumblrPost.new)
+    post.title = CGI::unescapeHTML((p/"regular-title").first.inner_html.to_s) if (p/"regular-title").first
+    post.text  = CGI::unescapeHTML((p/"regular-body").first.inner_html.to_s) if (p/"regular-body").first
+  end
+  
+  def self.extract_video(p, post = TumblrPost.new)
+    post.title = CGI::unescapeHTML((p/"video-caption").first.inner_html.to_s) if (p/"video-caption").first
+    post.text  = CGI::unescapeHTML((p/"video-source").first.inner_html.to_s) if (p/"video-source").first
+  end
+  
+  def self.extract_audio(p, post = TumblrPost.new)
+    post.title = CGI::unescapeHTML((p/"audio-caption").first.inner_html.to_s) if (p/"audio-caption").first
+    post.text  = CGI::unescapeHTML((p/"audio-player").first.inner_html.to_s) if (p/"audio-player").first
+  end
+  
   #### To-do: build other post types
 
 end

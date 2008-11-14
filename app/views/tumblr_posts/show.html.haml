@@ -1,0 +1,10 @@
+%table
+  %tr
+    %td= @post.text
+    %td= @post.big_url
+    %tr= @post.timestamp
+
+
+= link_to 'Edit',  url(:edit_tumblr_post,  @post)
+|
+= link_to 'Back', url(:tumblr_posts)

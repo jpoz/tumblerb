@@ -1,0 +1,18 @@
+%table{:style => 'border: 1px solid #999; border-collapse: separate; width: 700px; margin: 0px auto;'}
+  %tr
+    %th
+      %h1
+        Posts
+  - for post in @posts
+    %tr
+      %td= post.title
+      %td
+        -  if post.post_type == 'photo'
+          = image_tag(post.med_url)
+        = post.text
+      %td= post.timestamp
+
+      %td= link_to 'Show', url(:tumblr_post, post)
+      %td= link_to 'Edit', url(:edit_tumblr_post,  post)
+
+= link_to 'New', url(:new_tumblr_post)

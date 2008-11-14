@@ -1,0 +1,15 @@
+%h1
+  Posts controller, edit action
+%p
+  Edit this file in
+  %tt
+    app/views/posts/edit.html.erb
+= error_messages_for :post
+
+= form_for(@post, :action => url(:tumblr_post, @post)) do
+  %p
+    = submit "Update"
+
+= link_to 'Show', url(:tumblr_post, @post)
+|
+= link_to 'Back', url(:tumblr_posts)
